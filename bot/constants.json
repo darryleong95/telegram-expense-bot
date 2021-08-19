@@ -1,0 +1,91 @@
+{
+    "categories": {
+        "food": {
+            "tag": "food",
+            "message": "🥘 Food"
+        },
+        "bills": {
+            "tag": "bills",
+            "message": "🌸 Bills"
+        },
+        "transport": {
+            "tag": "transport",
+            "message": "🚌 Transport"
+        },
+        "gifts": {
+            "tag": "gifts",
+            "message": "🎁 Gifts"
+        },
+        "clothes": {
+            "tag": "clothes",
+            "message": "👕 Clothes"
+        },
+        "others": {
+            "tag": "others",
+            "message": "🤯 Others"
+        }
+    },
+    "summaries": {
+        "last_week": {
+            "tag": "lw",
+            "message": "🙄 Last Week"
+        },
+        "current_week": {
+            "tag": "cw",
+            "message": "🙄 Current Week"
+        },
+        "last_month": {
+            "tag": "lm",
+            "message": "😂 Last Month"
+        },
+        "current_month": {
+            "tag": "cm",
+            "message": "😊 Current Month"
+        },
+        "last_year": {
+            "tag": "ly",
+            "message": "🙂 Last Year"
+        },
+        "current_year": {
+            "tag": "cy",
+            "message": "😀 Current Year"
+        }
+    },
+    "recurring": {
+        "add": {
+            "message": "➕ Add"
+        },
+        "delete": {
+            "message": "➖ Remove"
+        },
+        "view": {
+            "message": "👀 View All Recurring Payments"
+        }
+    },
+    "defaults": {
+        "start": "What would you like to do?",
+        "expense": "💸 Expense",
+        "recurring": "📫 Recurring",
+        "summary": "📋 Request Summary",
+        "back": "⬅️ Back",
+
+        "select_action": "Please select an Action",
+        "select_category": "Please select a Category",
+
+        "expense_amount_input": "🐼 Key in amount",
+        "expense_add_success": "Expense Registerd 😄",
+        "expense_add_failure": "Failed to Register expense...😥",
+
+        "recurring_add_prompt": "✨ Please Enter in the name of your new recurring payments followed by the amount, e.g. [netflix 9.90] ✨",
+        "recurring_add_success": "♾️ Recurring payment added!",
+        "recurring_add_failure": "Failed to Register Recurring payment...😥 \nPlease try again later",
+        "recurring_add_format_error": "Please ensure input is in the correct format ❌",
+
+        "recurring_delete_prompt": "Please select payment to remove",
+        "recurring_delete_success": "✅ Recurring payment deleted!",
+        "recurring_delete_failure": "Failed to remove Recurring payment...😥 \nPlease try again later",
+
+        "recurring_view_success": "",
+        "recurring_view_failure": ""
+    }
+}
