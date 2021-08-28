@@ -3,7 +3,7 @@ const AWS = require('aws-sdk')
 const { v4: uuidv4 } = require('uuid')
 require('dotenv').config()
 
-AWS.config.update({ region: 'ap-southeast-1' })
+AWS.config.update({ region: process.env.REGION })
 var ddb = new AWS.DynamoDB({ apiVersion: '2012-08-10' })
 const bot = new TelegramBot(process.env.TOKEN, { polling: true })
 const chatId = process.env.CHAT_ID
@@ -38,7 +38,7 @@ exports.handler = async (event) => {
     var is_success = true
     for (const tag in aggregate_map) {
         let params = {
-            TableName: 'expense-table',
+            TableName: process.env.TABLE_NAME,
             Item: {
                 'id': { S: uuidv4() },
                 'category': { S: 'expense' },
@@ -71,7 +71,7 @@ exports.handler = async (event) => {
 
 const getExpenses = async (startDate, endDate) => {
     let params = {
-        TableName: 'expense-table',
+        TableName: process.env.TABLE_NAME,
         FilterExpression: "category = :category and insert_date between :startDate and :endDate",
         ExpressionAttributeValues: {
             ":category": {
@@ -107,7 +107,7 @@ const scan = async (params) => {
 
 const getTags = async () => {
     let params = {
-        TableName: 'expense-table',
+        TableName: process.env.TABLE_NAME,
         FilterExpression: "category = :category",
         ExpressionAttributeValues: {
             ":category": {
@@ -133,7 +133,7 @@ const formatDate = (date) => {
 const remove = async (id) => {
     let is_success = false
     var params = {
-        TableName: 'expense-table',
+        TableName: process.env.TABLE_NAME,
         Key: {
             "id": {
                 "S": id

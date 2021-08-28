@@ -1,7 +1,14 @@
 const TelegramBot = require('node-telegram-bot-api');
+const moment = require('moment')
+moment.updateLocale('en', {
+    week: {
+        dow: 1, // Monday is the first day of the week.
+    }
+});
+
 const { categories, summaries, recurring, defaults } = require('./constants.json')
-const { formatDate, getDateOfISOWeek, summaryMessageBuilder, recurringMessageBuilder, capitalize } = require('./helpers')
-const { getAllRecurringPayments, deleteRecurringPayment, writeToTable, getExpenses } = require('./dbHandler')
+const { summaryMessageBuilder, recurringMessageBuilder, capitalize } = require('./helpers')
+const { getAllRecurringPayments, deleteRecurringPayment, writeToTable, getExpenses, createExpenseTable, updateRecurringExpense } = require('./dbHandler')
 
 require('dotenv').config()
 const bot = new TelegramBot(process.env.TOKEN, { polling: true });
@@ -13,6 +20,15 @@ bot.on("polling_error", console.log);
  */
 let state = null
 let selected_category = null
+
+// create table
+const tableSetup = async () => {
+    let isSuccess = await createExpenseTable()
+    if (isSuccess) {
+        console.log(`Table: ${process.env.TABLE_NAME} successfully created`)
+    }
+}
+tableSetup()
 
 /**
  * return to default options
@@ -75,21 +91,34 @@ bot.onText(/^\d+(\.\d+)*$/, (msg, match) => {
     state = null
 })
 
-/**
- * recurring payments: add new recurring payment input prompt
- */
-bot.onText(new RegExp(`${recurring.add.message}`), (msg, match) => {
-    state = recurring.add.message
-    bot.sendMessage(msg.chat.id, defaults.recurring_add_prompt)
+bot.onText(new RegExp(`${recurring.add.message}|${recurring.delete.message}`), (msg, match) => {
+    options = [defaults.recurring_this_month, defaults.recurring_next_month]
+    let res = ''
+    console.log(msg.text)
+    if (msg.text == recurring.add.message) {
+        state = recurring.add.message
+        res = 'Please select when this recurring payment will start'
+    }
+    if (msg.text == recurring.delete.message) {
+        state = recurring.delete.message
+        res = 'When will this take effect from?'
+    }
+    let keyboard = genericKeyboardBuilder(options, 2, true)
+    let data = { 'reply_markup': JSON.stringify(keyboard) }
+    bot.sendMessage(msg.chat.id, res, data)
 })
 
-/**
- * recurring payments: remove recurring payment selection prompt 
- */
-bot.onText(new RegExp(`${recurring.delete.message}`), async (msg, match) => {
-    state = recurring.delete.message
-    let payments = await getAllRecurringPayments()
-    bot.sendMessage(msg.chat.id, defaults.recurring_delete_prompt, getRecurringPaymentOptions(payments, 2))
+bot.onText(new RegExp(`${defaults.recurring_this_month}|${defaults.recurring_next_month}`), async (msg, match) => {
+    // ask when recurring payment starts
+    selected_category = msg.text
+    if (state == recurring.add.message) {
+        let keyboard = genericKeyboardBuilder([], 0, true)
+        bot.sendMessage(msg.chat.id, defaults.recurring_add_prompt, { 'reply_markup': JSON.stringify(keyboard) })
+    }
+    if (state == recurring.delete.message) {
+        let payments = await getAllRecurringPayments()
+        bot.sendMessage(msg.chat.id, defaults.recurring_delete_prompt, getRecurringPaymentOptions(payments, 2))
+    }
 })
 
 /**
@@ -106,28 +135,41 @@ bot.on('message', async (msg) => {
     const chatId = msg.chat.id;
     const message = msg.text;
     // add new recurring payment
-    if (state == recurring.add.message && message != defaults.back) {
+    if (state == recurring.add.message
+        && (selected_category == defaults.recurring_this_month || selected_category == defaults.recurring_next_month)
+        && message != defaults.back) {
         let isValid = isAddRecurringInput(message)
         if (isValid) {
             let msgArr = message.split(" ")
             let tag = msgArr.slice(0, msgArr.length - 1).join(" ").toLowerCase()
             let value = msgArr[msgArr.length - 1]
+            // register new recurring payment 
             let isAdded = writeToTable({ tag, value, type: 'recurring' })
+            // updated existing month's recurring payment
+            if (selected_category == defaults.recurring_this_month)
+                updateRecurringExpense(parseFloat(value), true)
             let reply = isAdded ? defaults.recurring_add_success : defaults.recurring_add_failure
             bot.sendMessage(chatId, reply, getDefaultOptions())
         } else {
             bot.sendMessage(chatId, defaults.recurring_add_format_error, getDefaultOptions())
         }
+        selected_category = null
         state = null
     }
     // remove selected recurring payment
-    if (state == recurring.delete.message && message != defaults.back) {
+    if (state == recurring.delete.message
+        && (selected_category == defaults.recurring_this_month || selected_category == defaults.recurring_next_month)
+        && message != defaults.back) {
         let msgArr = message.split(" ")
         let tag = msgArr.slice(1, msgArr.length - 2).join(" ").toLowerCase()
         let value = msgArr[msgArr.length - 1].replace('$', '')
         let isDeleted = await deleteRecurringPayment({ tag, value, type: 'recurring' })
+        // updated existing month's recurring payment
+        if (selected_category == defaults.recurring_this_month)
+            updateRecurringExpense(parseFloat(value), false)
         let reply = isDeleted ? defaults.recurring_delete_success : defaults.recurring_delete_failure
         bot.sendMessage(chatId, reply, getDefaultOptions())
+        selected_category = null
         state = null
     }
     // request summary
@@ -167,13 +209,6 @@ const getRecurringPaymentOptions = (payments, numCols) => {
     return { 'reply_markup': JSON.stringify(keyboard) }
 }
 
-/**
- * 
- * @param {string[]} options - array of string message options
- * @param {integer} numCol - number of options per row
- * @param {boolean} hasBack - set to true to include back button in returned keyboard
- * @returns 
- */
 const genericKeyboardBuilder = (options, numCol, hasBack) => {
     let keyboard = []
     let numRows = Math.ceil(parseFloat(options.length) / numCol)
@@ -212,43 +247,36 @@ const isSummaryRequest = (message) => {
 
 
 const getDateRange = (type) => {
-    var today = new Date()
-    var end = formatDate(today)
-    var start = end
-    var oneJan = new Date(today.getFullYear(), 0, 1)
-    var numberOfDays = Math.floor((today - oneJan) / (24 * 60 * 60 * 1000))
-    var weekNumber = Math.ceil((today.getDay() + 1 + numberOfDays) / 7)
+    var end = new Date()
+    var start = new Date()
     switch (type) {
         case summaries.last_week.tag:
-            var date = getDateOfISOWeek(weekNumber - 1, today.getFullYear())
-            start = formatDate(date)
-            date.setDate(date.getDate() + 6)
-            end = formatDate(date)
+            start = moment().startOf('week').subtract(7, 'days').format('YYYY-MM-DD')
+            end = moment().endOf('week').subtract(7, 'days').format('YYYY-MM-DD')
             break;
         case summaries.current_week.tag:
-            var date = getDateOfISOWeek(weekNumber, today.getFullYear())
-            start = formatDate(date)
-            date.setDate(date.getDate() + 6)
-            end = formatDate(date)
+            start = moment().startOf('week').format('YYYY-MM-DD')
+            end = moment().endOf('week').format('YYYY-MM-DD')
             break;
         case summaries.last_month.tag:
-            start = formatDate(new Date(today.getFullYear(), today.getMonth() - 1, 1))
-            end = formatDate(new Date(today.getFullYear(), today.getMonth(), 0));
+            start = moment().subtract(1, 'months').startOf('month').format('YYYY-MM-DD')
+            end = moment().subtract(1, 'months').endOf('month').format('YYYY-MM-DD')
             break;
         case summaries.current_month.tag:
-            start = formatDate(new Date(today.getFullYear(), today.getMonth(), 1))
-            end = formatDate(new Date(today.getFullYear(), today.getMonth() + 1, 0));
+            start = moment().startOf('month').format('YYYY-MM-DD')
+            end = moment().endOf('month').format('YYYY-MM-DD')
             break;
         case summaries.last_year.tag:
-            start = formatDate(new Date(today.getFullYear() - 1, 0, 1));
-            end = formatDate(new Date(today.getFullYear() - 1, 12, 0));
+            start = moment().subtract(1, 'years').startOf('year').format('YYYY-MM-DD')
+            end = moment().subtract(1, 'years').endOf('year').format('YYYY-MM-DD')
             break;
         case summaries.current_year.tag:
-            start = formatDate(new Date(today.getFullYear(), 0, 1));
-            end = formatDate(new Date(today.getFullYear(), 12, 0));
+            start = moment().startOf('year').format('YYYY-MM-DD')
+            end = moment().endOf('year').format('YYYY-MM-DD')
             break;
         default:
             break;
     }
+    console.log(`Start date: ${start} | End date: ${end}`)
     return { start, end }
 }

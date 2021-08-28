@@ -77,6 +77,9 @@
         "expense_add_failure": "Failed to Register expense...😥",
 
         "recurring_add_prompt": "✨ Please Enter in the name of your new recurring payments followed by the amount, e.g. [netflix 9.90] ✨",
+        "recurring_this_month": "This Month 🍃",
+        "recurring_next_month": "Next Month ❄️",
+
         "recurring_add_success": "♾️ Recurring payment added!",
         "recurring_add_failure": "Failed to Register Recurring payment...😥 \nPlease try again later",
         "recurring_add_format_error": "Please ensure input is in the correct format ❌",
