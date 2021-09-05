@@ -20,7 +20,9 @@ module.exports.summaryMessageBuilder = (found_items, startDate, endDate) => {
             cm[item.tag] += parseFloat(item.value)
         else
             cm[item.tag] = parseFloat(item.value)
-        total += parseFloat(item.value)
+
+        if(item.tag != 'recurring')
+            total += parseFloat(item.value)
     }
 
     let message = `<b>Expense Summary</b>`
