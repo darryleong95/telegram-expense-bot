@@ -28,12 +28,12 @@ module.exports.summaryMessageBuilder = (found_items, startDate, endDate) => {
         + `\n<b>📅 ${startDate} ---> ${endDate}</b>`
         + `\n==============================`
         + `\n💰 Total: <b>$${Math.round(total)}</b>`
-        + `\n🥘 Food: <b>$${cm.food}</b> (${calculatePercentage(cm.food, total)})`
-        + `\n🚌 Transport: <b>$${cm.transport}</b> (${calculatePercentage(cm.transport, total)})`
-        + `\n💸 Bills: <b>$${cm.bills}</b> (${calculatePercentage(cm.bills, total)})`
-        + `\n👕 Clothes: <b>$${cm.clothes}</b> (${calculatePercentage(cm.clothes, total)})`
-        + `\n🎁 Gifts: <b>$${cm.gifts}</b> (${calculatePercentage(cm.gifts, total)})`
-        + `\n🤯 Others: <b>$${cm.others}</b> (${calculatePercentage(cm.others, total)})`
+        + `\n🥘 Food: <b>$${roundTwoDp(cm.food)}</b> (${calculatePercentage(cm.food, total)})`
+        + `\n🚌 Transport: <b>$${roundTwoDp(cm.transport)}</b> (${calculatePercentage(cm.transport, total)})`
+        + `\n💸 Bills: <b>$${roundTwoDp(cm.bills)}</b> (${calculatePercentage(cm.bills, total)})`
+        + `\n👕 Clothes: <b>$${roundTwoDp(cm.clothes)}</b> (${calculatePercentage(cm.clothes, total)})`
+        + `\n🎁 Gifts: <b>$${roundTwoDp(cm.gifts)}</b> (${calculatePercentage(cm.gifts, total)})`
+        + `\n🤯 Others: <b>$${roundTwoDp(cm.others)}</b> (${calculatePercentage(cm.others, total)})`
     return message
 }
 
@@ -49,6 +49,10 @@ module.exports.recurringMessageBuilder = (items) => {
         message += `\n🚩 ${capitalize(tag)} .............. $${Math.round(value)}`
     }
     return message
+}
+
+const roundTwoDp = (num) => {
+    return Math.round((num + Number.EPSILON) * 100) / 100
 }
 
 const capitalize = module.exports.capitalize = (word) => {
